@@ -1,0 +1,74 @@
+{
+    "1": {
+        "id_venta": 1,
+        "fecha_venta": "02-08-2024",
+        "cliente": "Juan ramirez",
+        "producto_vendido": "Ryzen 5 5600g",
+        "descripcion": "Procesador AMD 3.9 GHz, 6 nucleos y 12 hilos",
+        "monto": 200.0,
+        "metodo_pago": "Efectivo",
+        "vendedor": "Daniel rios",
+        "direccion_local": "Saavedra 1233",
+        "localidad": "Resistencia"
+    },
+    "2": {
+        "id_venta": 2,
+        "fecha_venta": "02-08-2024",
+        "cliente": "Debora gonzalez",
+        "producto_vendido": "Intel Core i7 11700",
+        "descripcion": "Procesador Intel 4.9GHz, 8 nucleos y 16 hilos",
+        "monto": 350.0,
+        "metodo_pago": "Transferencia",
+        "vendedor": "Jeremias zalazar",
+        "direccion_envio": "Buenos aires 46",
+        "fecha_envio": "03-08-2024"
+    },
+    "3": {
+        "id_venta": 3,
+        "fecha_venta": "03-08-2024",
+        "cliente": "Pablo cardozo",
+        "producto_vendido": "Nvidia RTX 3050",
+        "descripcion": "Placa Grafica de marca Nvidia",
+        "monto": 400.0,
+        "metodo_pago": "Tarjeta de credito",
+        "vendedor": "Leonardo solis",
+        "direccion_envio": "Neuquen 12",
+        "fecha_envio": "04-08-2024"
+    },
+    "4": {
+        "id_venta": 4,
+        "fecha_venta": "04-08-2024",
+        "cliente": "Pablo ramirez",
+        "producto_vendido": "Memoria Ram 8gb Fury",
+        "descripcion": "Memoria Ram de 8gb, marca Fury de 3200MHz",
+        "monto": 30.0,
+        "metodo_pago": "Efectivo",
+        "vendedor": "Jorge fernandez",
+        "direccion_local": "San martin 234",
+        "localidad": "Saenz pe\u00f1a"
+    },
+    "5": {
+        "id_venta": 5,
+        "fecha_venta": "05-08-2024",
+        "cliente": "Marcos fernandez",
+        "producto_vendido": "Fuente de Alimentacion 750W",
+        "descripcion": "Fuente de Alimentacion marca Master Cooler de 750w 80plus Bronze",
+        "monto": 100.0,
+        "metodo_pago": "Efectivo",
+        "vendedor": "Leonel gonzalez",
+        "direccion_local": "Buenos aires 76",
+        "localidad": "Quitilipi"
+    },
+    "6": {
+        "id_venta": 6,
+        "fecha_venta": "06-08-2024",
+        "cliente": "Nahuel rios",
+        "producto_vendido": "Ryzen 7 8700g",
+        "descripcion": "Procesador AMD 4.2GHz, 8 nucleos y 16 hilos",
+        "monto": 600.0,
+        "metodo_pago": "Tarjeta de credito",
+        "vendedor": "Camila rios",
+        "direccion_local": "Saavedra 123",
+        "localidad": "Castelli"
+    }
+}
