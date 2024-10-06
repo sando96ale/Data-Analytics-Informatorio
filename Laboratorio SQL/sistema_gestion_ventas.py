@@ -259,7 +259,7 @@ class GestionVentas:
             raise Exception(f"Falta la configuración de la base de datos: {e}")
 
     def connect(self):
-        '''Establecer una conexion con la Base de datos'''
+        '''Establece una conexion con la base de datos'''
         try:
             connection = mysql.connector.connect(
                 host = self.host,
@@ -272,7 +272,7 @@ class GestionVentas:
             if connection.is_connected():
                 return connection
             else:
-                raise Error('La conexión no pudo ser establecida.')
+                raise Error('Error al conectar a la base de datos.')
         
         except mysql.connector.InterfaceError:
             print(f"Error de conexión al servidor.")
@@ -292,188 +292,196 @@ class GestionVentas:
 
     def agregar_venta(self, venta):
         """Agrega una venta a la base de datos."""
-        connection = None
+        connection = self.connect()
+        if not connection:
+            return False
+
         try:
-            connection = self.connect()
-            if connection:
-                with connection.cursor() as cursor:
-                    # Verifica si el id_venta existe.
-                    cursor.execute("SELECT id_venta FROM ventas WHERE id_venta = %s", (venta.id_venta,))
-                    if cursor.fetchone():
-                        print(f"La venta con ID {venta.id_venta} ya existe.")
-                        return False
+            with connection.cursor() as cursor:
+                # Verifica si el id_venta existe.
+                cursor.execute("SELECT id_venta FROM ventas WHERE id_venta = %s", (venta.id_venta,))
+                if cursor.fetchone():
+                    print(f"La venta con ID {venta.id_venta} ya existe.")
+                    return False
+                
+                # Inserta la venta principal.
+                venta_query = '''
+                INSERT INTO ventas (id_venta, fecha_venta, cliente, producto_vendido, descripcion, monto, metodo_pago, vendedor) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                '''
+                cursor.execute(venta_query, (venta.id_venta, venta.fecha_venta, venta.cliente, venta.producto_vendido, 
+                                            venta.descripcion, venta.monto, venta.metodo_pago, venta.vendedor))
                     
-                    # Inserta la venta principal.
-                    venta_query = '''
-                    INSERT INTO ventas (id_venta, fecha_venta, cliente, producto_vendido, descripcion, monto, metodo_pago, vendedor) 
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                # Inserta la venta según el tipo.
+                if isinstance(venta, VentaOnline):
+                    query = '''
+                    INSERT INTO ventaonline (id_venta, direccion_envio, fecha_envio)
+                    VALUES (%s, %s, %s)
                     '''
-                    cursor.execute(venta_query, (venta.id_venta, venta.fecha_venta, venta.cliente, venta.producto_vendido, 
-                                                venta.descripcion, venta.monto, venta.metodo_pago, venta.vendedor))
-                        
-                    # Inserta la venta según el tipo.
-                    if isinstance(venta, VentaOnline):
-                        query = '''
-                        INSERT INTO ventaonline (id_venta, direccion_envio, fecha_envio)
-                        VALUES (%s, %s, %s)
-                        '''
-                        cursor.execute(query, (venta.id_venta, venta.direccion_envio, venta.fecha_envio))
+                    cursor.execute(query, (venta.id_venta, venta.direccion_envio, venta.fecha_envio))
 
-                    elif isinstance(venta, VentaLocal):
-                        query = '''
-                        INSERT INTO ventalocal (id_venta, direccion_local, localidad)
-                        VALUES (%s, %s, %s)
-                        '''
-                        cursor.execute(query, (venta.id_venta, venta.direccion_local, venta.localidad))
+                elif isinstance(venta, VentaLocal):
+                    query = '''
+                    INSERT INTO ventalocal (id_venta, direccion_local, localidad)
+                    VALUES (%s, %s, %s)
+                    '''
+                    cursor.execute(query, (venta.id_venta, venta.direccion_local, venta.localidad))
 
-                    connection.commit()
-                    print(f"La venta del producto: {venta.producto_vendido}, se ha guardado con éxito.")
-                    return True
+                connection.commit()
+                print(f"La venta del producto: {venta.producto_vendido}, se ha guardado con éxito.")
+                return True
 
         except mysql.connector.Error as err:
             print(f"Error al intentar agregar la venta a la base de datos: {err}")
-            if connection:
-                connection.rollback()
+            connection.rollback()
             return False
         except Exception as e:
             print(f"Ocurrió un error inesperado al intentar agregar la venta: {e}")
-            if connection:
-                connection.rollback()
+            connection.rollback()
             return False
         finally:
-            if connection.is_connected():
-                connection.close()
+            connection.close()
     
     def buscar_venta(self, id_venta):
-        connection = None
+        """Busca una venta por su ID."""
+        connection = self.connect()
+        if not connection:
+            return None
+        
         try:
-            id_venta = int(id_venta)
-            connection = self.connect()
-            if connection:
-                with connection.cursor(dictionary=True) as cursor:
-                    cursor.execute("SELECT * FROM ventas WHERE id_venta = %s", (id_venta,))
-                    venta_data = cursor.fetchone()
+            with connection.cursor(dictionary=True) as cursor:
+                cursor.execute("SELECT * FROM ventas WHERE id_venta = %s", (id_venta,))
+                venta_data = cursor.fetchone()
 
-                    if venta_data:
-                        cursor.execute("SELECT direccion_envio, fecha_envio FROM ventaonline WHERE id_venta = %s", (id_venta,))
-                        online_data = cursor.fetchone()
-                    
-                        if online_data:
-                            venta = VentaOnline.from_dict({**venta_data, **online_data})
-                        else:
-                            cursor.execute("SELECT direccion_local, localidad FROM ventalocal WHERE id_venta = %s", (id_venta,))
-                            local_data = cursor.fetchone()
-
-                            if local_data:
-                                venta = VentaLocal.from_dict({**venta_data, **local_data})
-
+                if venta_data:
+                    cursor.execute("SELECT direccion_envio, fecha_envio FROM ventaonline WHERE id_venta = %s", (id_venta,))
+                    online_data = cursor.fetchone()
+                
+                    if online_data:
+                        venta = VentaOnline.from_dict({**venta_data, **online_data})
                     else:
-                        venta = None
+                        cursor.execute("SELECT direccion_local, localidad FROM ventalocal WHERE id_venta = %s", (id_venta,))
+                        local_data = cursor.fetchone()
+
+                        if local_data:
+                            venta = VentaLocal.from_dict({**venta_data, **local_data})
+                        else:
+                            venta = None
+
+                else:
+                    print(f"No se encontró una venta con ID {id_venta}")
+                    venta = None
 
         except mysql.connector.Error as err:
             print(f"Error al intentar buscar la venta: {err}")
-            return None
-        except ValueError:
-            print("El ID de la venta debe ser un número entero.")
             return None
         except Exception as e:
             print(f"Ocurrió un error al intentar buscar la venta: {e}")
             return None
         finally:
-            if connection and connection.is_connected():
-                connection.close()
+            connection.close()
         
         return venta
 
     def actualizar_venta(self, id_venta, fecha_venta=None, cliente=None, producto_vendido=None, descripcion=None, monto=None, metodo_pago=None, vendedor=None, direccion_envio=None, fecha_envio=None, direccion_local=None, localidad=None):
-        connection = None
+        """Actualiza los datos de una venta existente."""
+        connection = self.connect()
+        if not connection:
+            return False
+        
         try:
-            id_venta = int(id_venta) 
-            connection  = self.connect()
+            with connection.cursor() as cursor:
+                cursor.execute('SELECT * FROM ventas WHERE id_venta = %s', (id_venta,))
+                if not cursor.fetchone():
+                    print(f'No existe una venta con el id {id_venta}')
+                    return False
 
-            if connection:
-                with connection.cursor() as cursor:
-                    cursor.execute('SELECT * FROM ventas WHERE id_venta = %s', (id_venta,))
-                    if not cursor.fetchone():
-                        print(f'No existe una venta con el id {id_venta}')
-                        return
 
-                    cursor.execute("""
-                        UPDATE ventas 
-                        SET fecha_venta = COALESCE(%s, fecha_venta), 
+                cursor.execute("""
+                    UPDATE ventas 
+                    SET fecha_venta = COALESCE(%s, fecha_venta), 
                         cliente = COALESCE(%s, cliente),
                         producto_vendido = COALESCE(%s, producto_vendido), 
                         descripcion = COALESCE(%s, descripcion),
                         monto = COALESCE(%s, monto),
                         metodo_pago = COALESCE(%s, metodo_pago),
                         vendedor = COALESCE(%s, vendedor) 
+                    WHERE id_venta = %s
+                    """, (fecha_venta, cliente, producto_vendido, descripcion, monto, metodo_pago, vendedor, id_venta)
+                    )
+
+                if direccion_envio or fecha_envio:
+                    cursor.execute("""
+                        UPDATE ventaonline 
+                        SET direccion_envio = COALESCE(%s, direccion_envio),
+                            fecha_envio = COALESCE(%s, fecha_envio)
                         WHERE id_venta = %s
-                        """, (fecha_venta, cliente, producto_vendido, descripcion, monto, metodo_pago, vendedor, id_venta)
-                        )
+                    """, (direccion_envio, fecha_envio, id_venta))
 
-                    if direccion_envio or fecha_envio:
-                        cursor.execute("""
-                            UPDATE ventaonline 
-                            SET direccion_envio = COALESCE(%s, direccion_envio),
-                                fecha_envio = COALESCE(%s, fecha_envio)
-                            WHERE id_venta = %s
-                        """, (direccion_envio, fecha_envio, id_venta))
-
-                    elif direccion_local or localidad:
-                        cursor.execute("""
-                            UPDATE ventalocal 
-                            SET direccion_local = COALESCE(%s, direccion_local),
-                                localidad = COALESCE(%s, localidad)
-                            WHERE id_venta = %s
-                        """, (direccion_local, localidad, id_venta))
-                        
-                connection.commit()
-                print(f'La venta con el id {id_venta} ha sido actualizada con éxito')
+                elif direccion_local or localidad:
+                    cursor.execute("""
+                        UPDATE ventalocal 
+                        SET direccion_local = COALESCE(%s, direccion_local),
+                            localidad = COALESCE(%s, localidad)
+                        WHERE id_venta = %s
+                    """, (direccion_local, localidad, id_venta))
+                    
+            connection.commit()
+            print(f'La venta con el id {id_venta} ha sido actualizada con éxito')
+            return True
 
         except mysql.connector.Error as err:
             print(f"Error al intentar actualizar la venta: {err}")
-        except ValueError:
-            print("El ID de la venta debe ser un número entero.")
+            connection.rollback()
+            return False
         except Exception as e:
-            print(f"Ocurrió un error al intentar buscar la venta: {e}")
+            print(f"Ocurrió un error al intentar actualizar la venta: {e}")
+            connection.rollback()
+            return False
         finally:
-            if connection and connection.is_connected():
-                connection.close()
+            connection.close()
 
     def eliminar_venta(self, id_venta):
-        connection = None
+        """Elimina una venta de la base de datos."""
+        connection = self.connect()
+        if not connection:
+            return False
+        
         try:
-            connection = self.connect()
-            if connection:
-                with connection.cursor() as cursor:
-                    id_venta = int(id_venta)
-                    cursor.execute('SELECT * FROM ventas WHERE id_venta = %s', (id_venta,))
-                    if not cursor.fetchone():
-                        print(f'No existe una venta con el id {id_venta}')
-                        return
-                    
-                    cursor.execute('DELETE FROM ventaonline WHERE id_venta = %s', (id_venta,))
-                    cursor.execute('DELETE FROM ventalocal WHERE id_venta = %s', (id_venta,))
-                    cursor.execute('DELETE FROM ventas WHERE id_venta = %s', (id_venta,))
+            with connection.cursor() as cursor:
+                id_venta = int(id_venta)
+                cursor.execute('SELECT * FROM ventas WHERE id_venta = %s', (id_venta,))
+                if not cursor.fetchone():
+                    print(f'No existe una venta con el id {id_venta}')
+                    return False
 
-                    if cursor.rowcount > 0:
-                        connection.commit()
-                        print(f'La venta con el id {id_venta} ha sido eliminada con éxito')
-                    else:
-                        print(f'No se pudo eliminar la venta con el id {id_venta}')
+                cursor.execute('DELETE FROM ventaonline WHERE id_venta = %s', (id_venta,))
+                cursor.execute('DELETE FROM ventalocal WHERE id_venta = %s', (id_venta,))
+                cursor.execute('DELETE FROM ventas WHERE id_venta = %s', (id_venta,))
 
-        except ValueError:
-            print("El ID de la venta debe ser un número entero válido.")
+                if cursor.rowcount > 0:
+                    connection.commit()
+                    print(f'La venta con el id {id_venta} ha sido eliminada con éxito')
+                    return True
+                else:
+                    print(f'No se pudo eliminar la venta con el id {id_venta}')
+                    return False
+
         except mysql.connector.Error as err:
             print(f"Error en la base de datos al intentar eliminar la venta: {err}")
         except Exception as e:
             print(f"Ocurrió un error al intentar eliminar la venta: {e}")
+            connection.rollback()
+            return False
         finally:
-            if connection and connection.is_connected():
-                connection.close()
+            connection.close()
     
     def mostrar_todas_las_ventas(self):
-        connection = None
+        """Muestra todas las ventas de la base de datos, tanto online como locales."""
+        connection = self.connect()
+        if not connection:
+            return False
+        
         try:
             connection = self.connect()
             if connection:
@@ -486,20 +494,20 @@ class GestionVentas:
                         id_venta =  venta_data['id_venta']
 
                         cursor.execute('SELECT direccion_envio, fecha_envio FROM ventaonline WHERE id_venta = %s', (id_venta,))
-                        venta_online_data = cursor.fetchone()
+                        online_data = cursor.fetchone()
 
-                        if venta_online_data:
-                            venta_data['direccion_envio'] = venta_online_data['direccion_envio']
-                            venta_data['fecha_envio'] = venta_online_data['fecha_envio']
+                        if online_data:
+                            venta_data['direccion_envio'] = online_data['direccion_envio']
+                            venta_data['fecha_envio'] = online_data['fecha_envio']
                             venta = VentaOnline(**venta_data)
                         
                         else:
                             cursor.execute('SELECT direccion_local, localidad FROM ventalocal WHERE id_venta = %s', (id_venta,))
-                            venta_local_data = cursor.fetchone()
+                            local_data = cursor.fetchone()
 
-                            if  venta_local_data:
-                                venta_data['direccion_local'] = venta_local_data['direccion_local']
-                                venta_data['localidad'] = venta_local_data['localidad']
+                            if  local_data:
+                                venta_data['direccion_local'] = local_data['direccion_local']
+                                venta_data['localidad'] = local_data['localidad']
                                 venta = VentaLocal(**venta_data)
                             else:
                                 continue
@@ -508,9 +516,12 @@ class GestionVentas:
 
                     return ventas
 
+        except mysql.connector.Error as err:
+            print(f"Error en la base de datos al intentar mostrar todas las ventas: {err}")
+            return False
         except Exception as e:
             print(f"Ocurrió un error al intentar mostrar todas las ventas: {e}")
+            return False
         finally:
-            if connection and connection.is_connected():
-                connection.close()
+            connection.close()
 

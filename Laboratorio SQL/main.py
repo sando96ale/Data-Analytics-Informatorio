@@ -13,7 +13,10 @@ def agregar_venta(gestion_ventas):
     """Solicita al usuario información para agregar una venta."""
     while True:
         try:
-            id_venta = input("ID de la venta: ")
+            id_venta = int(input("ID de la venta: "))
+            if gestion_ventas.buscar_venta(id_venta): 
+                print(f"Error: La venta con ID {id_venta} ya existe. Por favor, elige un ID diferente.")
+                continue
             break
         except ValueError:
             print("Error: El ID de la venta debe ser un número entero. Por favor, ingrese de nuevo.")
@@ -31,7 +34,7 @@ def agregar_venta(gestion_ventas):
 
     while True:
         try:
-            monto = input("Monto: ")
+            monto = float(input("Monto: "))
             break
         except ValueError:
             print("Error: El monto debe ser un número. Por favor, ingrese de nuevo.")
@@ -57,10 +60,7 @@ def agregar_venta(gestion_ventas):
 
         venta = VentaLocal(id_venta, fecha_venta, cliente, producto_vendido, descripcion, monto, metodo_pago, vendedor, direccion_local, localidad)
 
-    if gestion_ventas.agregar_venta(venta):
-        print("Venta agregada exitosamente.")
-    else:
-        print("No se pudo agregar la venta.")
+    gestion_ventas.agregar_venta(venta)
 
 def buscar_venta(gestion_ventas):
     id_venta = input("ID de la venta a buscar: ")
@@ -178,8 +178,10 @@ def main():
             mostrar_todas_las_ventas(gestion_ventas)
 
         elif opcion == "6":
-            print("Saliendo del programa.")
-            break
+            confirmacion = input("¿Estás seguro de que deseas salir? (S/N): ").lower()
+            if confirmacion == 's':
+                print("Saliendo del programa.")
+                break
 
         else:
             print("Opción inválida. Por favor, elige una opción válida.")
